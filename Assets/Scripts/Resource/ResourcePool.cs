@@ -1,57 +1,53 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class ResourcePool : MonoBehaviour
 {
     [SerializeField] private Resource _prefab;
-    [SerializeField] private ResourceRegistry[] _registries;
+    [SerializeField] private ResourceRegistry _resourceRegistry;
     [SerializeField] private Transform _container;
+    [SerializeField] private int _prewarmCount = 10;
+
+    private readonly HashSet<Resource> _activeResources = new HashSet<Resource>();
 
     private ObjectPool<Resource> _pool;
 
-    public int ActiveCount { get; private set; }
+    public int ActiveCount => _activeResources.Count;
 
     private void Awake()
     {
-        _pool = new ObjectPool<Resource>(CreateResource, _container, OnResourceGet, OnResourceReturn);
+        _pool = new ObjectPool<Resource>(CreateResource, _container);
+        _pool.Prewarm(_prewarmCount);
     }
 
-    public void Prewarm(int count)
+    public Resource Spawn(Vector3 position, Quaternion rotation)
     {
-        _pool.Prewarm(count);
-    }
+        if (_prefab == null || _resourceRegistry == null)
+            return null;
 
-    public void Spawn(Vector3 position, Quaternion rotation)
-    {
-        _pool.Rent(position, rotation);
-        ActiveCount++;
-    }
+        Resource resource = _pool.Rent(position, rotation);
 
-    public void Return(Resource resource)
-    {
-        _pool.Return(resource);
-        ActiveCount--;
-    }
-
-    private Resource CreateResource()
-    {
-        Resource resource = Instantiate(_prefab, _container);
-        resource.gameObject.SetActive(false);
+        _activeResources.Add(resource);
+        _resourceRegistry.Register(resource);
 
         return resource;
     }
 
-    private void OnResourceGet(Resource resource)
+    public void Return(Resource resource)
     {
-        foreach (ResourceRegistry registry in _registries)
-            registry.Register(resource);
+        if (resource == null)
+            return;
+
+        if (_activeResources.Remove(resource) == false)
+            return;
+
+        _resourceRegistry.Release(resource);
+        _resourceRegistry.Unregister(resource);
+        _pool.Return(resource);
     }
 
-    private void OnResourceReturn(Resource resource)
+    private Resource CreateResource()
     {
-        foreach (ResourceRegistry registry in _registries)
-        {
-            registry.Release(resource);
-            registry.Unregister(resource);
-        }
+        return Instantiate(_prefab, _container);
     }
 }

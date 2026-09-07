@@ -1,4 +1,4 @@
 public enum ResourceType
 {
-    Wheat
+    BigPotato
 }

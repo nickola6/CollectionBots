@@ -5,13 +5,12 @@ public class ResourceSpawner : MonoBehaviour
 {
     private const int SpawnAttempts = 20;
 
-    [SerializeField] private ResourcePool _pool;
-    [SerializeField] private ResourceRegistry _registry;
+    [SerializeField] private ResourceSpawnService _spawnService;
+    [SerializeField] private SpawnPositionChecker _positionChecker;
     [SerializeField] private BoxCollider _spawnArea;
-    [SerializeField] private int _initialSpawnCount = 2;
-    [SerializeField] private int _maxActiveCount = 5;
-    [SerializeField] private float _spawnInterval = 8f;
-    [SerializeField] private float _minSpawnDistance = 2f;
+    [SerializeField] private int _initialSpawnCount = 10;
+    [SerializeField] private int _maxActiveCount = 10;
+    [SerializeField] private float _spawnInterval = 3f;
 
     private Coroutine _spawnRoutine;
     private bool _isSpawning;
@@ -21,7 +20,7 @@ public class ResourceSpawner : MonoBehaviour
     {
         _isSpawning = true;
 
-        if (_isInitialized == true)
+        if (_isInitialized)
             _spawnRoutine = StartCoroutine(SpawnRoutine());
     }
 
@@ -37,7 +36,9 @@ public class ResourceSpawner : MonoBehaviour
 
     private void Start()
     {
-        _pool.Prewarm(_maxActiveCount);
+        if (_spawnService == null || _positionChecker == null || _spawnArea == null)
+            return;
+
         SpawnInitialResources();
 
         _isInitialized = true;
@@ -48,7 +49,7 @@ public class ResourceSpawner : MonoBehaviour
     {
         WaitForSeconds wait = new WaitForSeconds(_spawnInterval);
 
-        while (_isSpawning == true)
+        while (_isSpawning)
         {
             yield return wait;
             SpawnRandomResource();
@@ -63,19 +64,26 @@ public class ResourceSpawner : MonoBehaviour
 
     private void SpawnRandomResource()
     {
-        if (_pool.ActiveCount >= _maxActiveCount)
+        if (GetActiveCount() >= _maxActiveCount)
             return;
 
         for (int attempt = 0; attempt < SpawnAttempts; attempt++)
         {
             Vector3 position = GetRandomPosition();
 
-            if (_registry.IsPositionOccupied(position, _minSpawnDistance) == true)
+            if (_positionChecker.IsFree(position) == false)
                 continue;
 
-            _pool.Spawn(position, Quaternion.identity);
+            if (_spawnService.Spawn(position) == null)
+                return;
+
             return;
         }
+    }
+
+    private int GetActiveCount()
+    {
+        return _spawnService.ActiveCount;
     }
 
     private Vector3 GetRandomPosition()

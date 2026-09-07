@@ -11,14 +11,20 @@ public class BaseScanner
 
     public bool FindNearestAvailable(Vector3 origin, out Resource resource)
     {
-        resource = default;
+        resource = null;
+
+        if (_provider == null)
+            return false;
 
         float closestDistanceSqr = float.MaxValue;
         bool resourceFound = false;
 
         foreach (Resource candidate in _provider.Resources)
         {
-            if (_provider.IsOccupied(candidate) == true)
+            if (candidate == null)
+                continue;
+
+            if (_provider.IsOccupied(candidate))
                 continue;
 
             Vector3 offset = candidate.transform.position - origin;

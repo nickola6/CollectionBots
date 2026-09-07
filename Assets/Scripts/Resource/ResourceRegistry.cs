@@ -1,31 +1,51 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class ResourceRegistry : MonoBehaviour, IResourceProvider
+[CreateAssetMenu(fileName = "ResourceRegistry", menuName = "Scriptable Objects/Resource Registry")]
+public class ResourceRegistry : ScriptableObject, IResourceProvider
 {
     private readonly HashSet<Resource> _resources = new HashSet<Resource>();
     private readonly HashSet<Resource> _occupiedResources = new HashSet<Resource>();
 
     public IEnumerable<Resource> Resources => _resources;
 
+    private void OnEnable()
+    {
+        Clear();
+    }
+
+    private void OnDisable()
+    {
+        Clear();
+    }
+
     public void Register(Resource resource)
     {
+        if (resource == null)
+            return;
+
         _resources.Add(resource);
     }
 
     public void Unregister(Resource resource)
     {
+        if (resource == null)
+            return;
+
         _resources.Remove(resource);
         _occupiedResources.Remove(resource);
     }
 
     public bool IsOccupied(Resource resource)
     {
-        return _occupiedResources.Contains(resource);
+        return resource != null && _occupiedResources.Contains(resource);
     }
 
     public bool TryOccupy(Resource resource)
     {
+        if (resource == null)
+            return false;
+
         if (_resources.Contains(resource) == false)
             return false;
 
@@ -34,21 +54,15 @@ public class ResourceRegistry : MonoBehaviour, IResourceProvider
 
     public void Release(Resource resource)
     {
+        if (resource == null)
+            return;
+
         _occupiedResources.Remove(resource);
     }
 
-    public bool IsPositionOccupied(Vector3 position, float minDistance)
+    private void Clear()
     {
-        float distanceSqr = minDistance * minDistance;
-
-        foreach (Resource resource in _resources)
-        {
-            Vector3 offset = resource.transform.position - position;
-
-            if (offset.sqrMagnitude <= distanceSqr)
-                return true;
-        }
-
-        return false;
+        _resources.Clear();
+        _occupiedResources.Clear();
     }
 }
