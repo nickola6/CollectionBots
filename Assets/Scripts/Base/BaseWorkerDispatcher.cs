@@ -14,10 +14,9 @@ public class BaseWorkerDispatcher : MonoBehaviour
 
     public void StartDispatch(BaseWorkforce workforce)
     {
-        _isDispatching = true;
-
         StopDispatch();
 
+        _isDispatching = true;
         _workforce = workforce;
 
         if (_workforce == null)

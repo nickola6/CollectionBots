@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class ResourceDeliveryHandler : MonoBehaviour
 {
-    [SerializeField] private ResourcePool _resourcePool;
+    [SerializeField] private ResourceSpawnService _spawnService;
     [SerializeField] private BaseRegistry _baseRegistry;
 
     private void OnEnable()
@@ -57,9 +57,9 @@ public class ResourceDeliveryHandler : MonoBehaviour
 
     private void OnResourceReceived(Resource resource)
     {
-        if (_resourcePool == null)
+        if (_spawnService == null)
             return;
 
-        _resourcePool.Return(resource);
+        _spawnService.Return(resource);
     }
 }

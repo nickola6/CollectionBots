@@ -4,7 +4,7 @@ using UnityEngine;
 public class BaseSpawner : MonoBehaviour
 {
     [SerializeField] private BaseRegistry _baseRegistry;
-    [SerializeField] private BaseController _basePrefab;
+    [SerializeField] private BaseFactory _baseFactory;
 
     private readonly HashSet<BaseController> _subscribedBases = new HashSet<BaseController>();
 
@@ -31,9 +31,7 @@ public class BaseSpawner : MonoBehaviour
         foreach (BaseController baseController in _subscribedBases)
         {
             if (baseController != null)
-            {
                 baseController.BaseFounded -= OnBaseFounded;
-            }
         }
 
         _subscribedBases.Clear();
@@ -69,10 +67,13 @@ public class BaseSpawner : MonoBehaviour
 
     private void OnBaseFounded(UnitWorker founder, Vector3 position)
     {
-        if (_basePrefab == null || founder == null)
+        if (_baseFactory == null || founder == null)
             return;
 
-        BaseController newBase = Instantiate(_basePrefab, position, Quaternion.identity);
+        BaseController newBase = _baseFactory.Create(
+            position,
+            Quaternion.identity);
+
         newBase.ReceiveFoundingWorker(founder);
     }
 }

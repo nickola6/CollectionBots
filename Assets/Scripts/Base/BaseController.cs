@@ -8,50 +8,48 @@ public class BaseController : MonoBehaviour
     private const int NewBaseResourceCount = 5;
     private const int MinWorkersRequiredToFoundBase = 2;
 
-    [SerializeField] private ResourceRegistry _resourceRegistry;
     [SerializeField] private ResourceReceiver _resourceReceiver;
+    [SerializeField] private ResourceSpawnService _resourceSpawnService;
+
     [SerializeField] private BaseRegistry _baseRegistry;
     [SerializeField] private BaseWorkerDispatcher _workerDispatcher;
+    [SerializeField] private BaseFoundationService _foundationService;
 
     [SerializeField] private WorkerSpawner _workerSpawner;
     [SerializeField] private UnitWorker[] _initialWorkers;
-    [SerializeField] private Transform _flagPrefab;
 
     public event Action<UnitWorker, Vector3> BaseFounded;
 
     private readonly ResourceBank _resourceBank = new ResourceBank();
+
     private BaseScanner _scanner;
     private BaseWorkforce _workforce;
-    private BaseFlag _flag;
     private WorkerResourceAssigner _resourceAssigner;
 
+    private Vector3 _foundationPosition;
+    private Transform _foundationDestination;
+
+    private bool _hasFoundationRequest;
     private bool _isFounderDispatched;
     private bool _isStarted;
-
+    private bool _isInitialized;
+    
     public ResourceReceiver ResourceReceiver => _resourceReceiver;
     public ResourceBank ResourceBank => _resourceBank;
-    private bool HasFlag => _flag.IsExist;
 
     private void Awake()
     {
         _scanner = new BaseScanner();
-        _scanner.Initialize(_resourceRegistry);
-
         _workforce = new BaseWorkforce();
-        _resourceAssigner = new WorkerResourceAssigner(_scanner, _resourceRegistry);
-        _flag = new BaseFlag(_flagPrefab);
     }
 
     private void OnEnable()
     {
-        if (_workerDispatcher != null)
-            _workerDispatcher.DispatchRequested += OnDispatchRequested;
+        if (_isStarted == false)
+            return;
 
-        if (_isStarted)
-        {
-            _baseRegistry.Register(this);
-            _workerDispatcher.StartDispatch(_workforce);
-        }
+        Subscribe();
+        _workerDispatcher.StartDispatch(_workforce);
     }
 
     private void OnDisable()
@@ -62,17 +60,28 @@ public class BaseController : MonoBehaviour
             _workerDispatcher.StopDispatch();
         }
 
+        if (_foundationService != null)
+            _foundationService.FoundationRequested -= OnFoundationRequested;
+
         if (_baseRegistry != null)
             _baseRegistry.Unregister(this);
     }
 
     private void Start()
     {
-        Initialize();
+        if (_isInitialized == false)
+            InitializeFromInspector();
+
         RegisterInitialWorkers();
+
+        _resourceReceiver.ResourceReceived -= OnResourceReceived;
+        _resourceReceiver.ResourceReceived += OnResourceReceived;
+
+        Subscribe();
 
         _baseRegistry.Register(this);
         _workerDispatcher.StartDispatch(_workforce);
+
         _isStarted = true;
     }
 
@@ -80,22 +89,96 @@ public class BaseController : MonoBehaviour
     {
         if (_resourceReceiver != null)
             _resourceReceiver.ResourceReceived -= OnResourceReceived;
+
+        if (_foundationDestination != null)
+            Destroy(_foundationDestination.gameObject);
     }
 
-    public void Initialize()
+    public void Initialize(
+    ResourceSpawnService resourceSpawnService,
+    BaseRegistry baseRegistry,
+    BaseFoundationService foundationService)
     {
-        _resourceReceiver.ResourceReceived -= OnResourceReceived;
-        _resourceReceiver.ResourceReceived += OnResourceReceived;
+        if (resourceSpawnService == null)
+            throw new InvalidOperationException(
+                $"{nameof(resourceSpawnService)} is not assigned.");
+
+        if (baseRegistry == null)
+            throw new InvalidOperationException(
+                $"{nameof(baseRegistry)} is not assigned.");
+
+        if (foundationService == null)
+            throw new InvalidOperationException(
+                $"{nameof(foundationService)} is not assigned.");
+
+        _resourceSpawnService = resourceSpawnService;
+        _baseRegistry = baseRegistry;
+        _foundationService = foundationService;
+
+        ResourceRegistry resourceRegistry =
+            _resourceSpawnService.Registry;
+
+        _scanner.Initialize(resourceRegistry);
+
+        _resourceAssigner = new WorkerResourceAssigner(
+            _scanner,
+            resourceRegistry);
+
+        _isInitialized = true;
     }
 
-    public void PlaceFlag(Vector3 position)
+    private void InitializeFromInspector()
     {
-        _flag.Place(position);
+        if (_resourceSpawnService == null)
+            throw new InvalidOperationException(
+                $"{nameof(_resourceSpawnService)} is not assigned.");
+
+        if (_baseRegistry == null)
+            throw new InvalidOperationException(
+                $"{nameof(_baseRegistry)} is not assigned.");
+
+        if (_foundationService == null)
+            throw new InvalidOperationException(
+                $"{nameof(_foundationService)} is not assigned.");
+
+        ResourceRegistry resourceRegistry =
+            _resourceSpawnService.Registry;
+
+        _scanner.Initialize(resourceRegistry);
+
+        _resourceAssigner = new WorkerResourceAssigner(
+            _scanner,
+            resourceRegistry);
+
+        _isInitialized = true;
+    }
+
+    private void Subscribe()
+    {
+        if (_workerDispatcher != null)
+            _workerDispatcher.DispatchRequested += OnDispatchRequested;
+
+        if (_foundationService != null)
+            _foundationService.FoundationRequested += OnFoundationRequested;
     }
 
     public void ReceiveFoundingWorker(UnitWorker worker)
     {
         RegisterWorker(worker);
+    }
+
+    private void OnFoundationRequested(
+        BaseController baseController,
+        Vector3 position)
+    {
+        if (baseController != this)
+            return;
+
+        _foundationPosition = position;
+        _hasFoundationRequest = true;
+        _isFounderDispatched = false;
+
+        _workerDispatcher.DispatchAvailableWorkers();
     }
 
     private void RegisterInitialWorkers()
@@ -126,12 +209,17 @@ public class BaseController : MonoBehaviour
         if (TryDispatchFounder(worker))
             return;
 
-        _resourceAssigner.TryAssign(worker, transform.position);
+        if (_resourceAssigner == null)
+            return;
+
+        _resourceAssigner.TryAssign(
+            worker,
+            transform.position);
     }
 
     private bool TryDispatchFounder(UnitWorker worker)
     {
-        if (HasFlag == false)
+        if (_hasFoundationRequest == false)
             return false;
 
         if (_isFounderDispatched)
@@ -147,14 +235,30 @@ public class BaseController : MonoBehaviour
         _workforce.Remove(worker);
 
         worker.BaseFounded += OnWorkerBaseFounded;
-        worker.StartFoundingBase(_flag.Transform);
+        worker.StartFoundingBase(
+            GetFoundationDestination());
 
         return true;
     }
 
+    private Transform GetFoundationDestination()
+    {
+        if (_foundationDestination == null)
+        {
+            GameObject destination =
+                new GameObject("FoundationDestination");
+
+            _foundationDestination = destination.transform;
+        }
+
+        _foundationDestination.position = _foundationPosition;
+
+        return _foundationDestination;
+    }
+
     private bool TrySpawnWorker()
     {
-        if (HasFlag)
+        if (_hasFoundationRequest)
             return false;
 
         if (_workerSpawner == null)
@@ -174,7 +278,7 @@ public class BaseController : MonoBehaviour
     {
         _resourceBank.Add();
 
-        if (HasFlag)
+        if (_hasFoundationRequest)
         {
             _workerDispatcher.DispatchAvailableWorkers();
             return;
@@ -185,11 +289,13 @@ public class BaseController : MonoBehaviour
         _workerDispatcher.DispatchAvailableWorkers();
     }
 
-    private void OnWorkerBaseFounded(UnitWorker worker, Vector3 position)
+    private void OnWorkerBaseFounded(
+        UnitWorker worker,
+        Vector3 position)
     {
         worker.BaseFounded -= OnWorkerBaseFounded;
 
-        _flag.Clear();
+        _hasFoundationRequest = false;
         _isFounderDispatched = false;
 
         TrySpawnWorker();

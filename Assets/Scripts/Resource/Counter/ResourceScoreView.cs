@@ -1,8 +1,6 @@
 using System.Collections.Generic;
-using System.Text;
 using TMPro;
 using UnityEngine;
-using static UnityEditor.ObjectChangeEventStream;
 
 public class ResourceScoreView : MonoBehaviour
 {

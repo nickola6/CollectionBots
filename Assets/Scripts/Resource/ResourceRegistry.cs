@@ -1,23 +1,11 @@
 using System.Collections.Generic;
-using UnityEngine;
 
-[CreateAssetMenu(fileName = "ResourceRegistry", menuName = "Scriptable Objects/Resource Registry")]
-public class ResourceRegistry : ScriptableObject, IResourceProvider
+public class ResourceRegistry : IResourceProvider
 {
     private readonly HashSet<Resource> _resources = new HashSet<Resource>();
     private readonly HashSet<Resource> _occupiedResources = new HashSet<Resource>();
 
     public IEnumerable<Resource> Resources => _resources;
-
-    private void OnEnable()
-    {
-        Clear();
-    }
-
-    private void OnDisable()
-    {
-        Clear();
-    }
 
     public void Register(Resource resource)
     {
@@ -58,11 +46,5 @@ public class ResourceRegistry : ScriptableObject, IResourceProvider
             return;
 
         _occupiedResources.Remove(resource);
-    }
-
-    private void Clear()
-    {
-        _resources.Clear();
-        _occupiedResources.Clear();
     }
 }

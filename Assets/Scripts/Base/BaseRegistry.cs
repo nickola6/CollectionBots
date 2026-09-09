@@ -2,24 +2,18 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "BaseRegistry", menuName = "Scriptable Objects/Base Registry")]
-public class BaseRegistry : ScriptableObject
+public class BaseRegistry : MonoBehaviour
 {
-    private readonly List<BaseController> _bases = new List<BaseController>();
+    private readonly BaseRegistryState _state = new BaseRegistryState();
 
     public event Action<BaseController> BaseAdded;
     public event Action<BaseController> BaseRemoved;
 
-    public IReadOnlyList<BaseController> Bases => _bases;
-
-    private void OnEnable()
-    {
-        Clear();
-    }
+    public IReadOnlyList<BaseController> Bases => _state.Bases;
 
     private void OnDisable()
     {
-        Clear();
+        _state.Clear();
     }
 
     public void Register(BaseController baseController)
@@ -27,10 +21,10 @@ public class BaseRegistry : ScriptableObject
         if (baseController == null)
             return;
 
-        if (_bases.Contains(baseController))
+        if (_state.IndexOf(baseController) >= 0)
             return;
 
-        _bases.Add(baseController);
+        _state.Add(baseController);
         BaseAdded?.Invoke(baseController);
     }
 
@@ -39,7 +33,7 @@ public class BaseRegistry : ScriptableObject
         if (baseController == null)
             return;
 
-        if (_bases.Remove(baseController) == false)
+        if (_state.Remove(baseController) == false)
             return;
 
         BaseRemoved?.Invoke(baseController);
@@ -47,11 +41,6 @@ public class BaseRegistry : ScriptableObject
 
     public int GetBaseNumber(BaseController baseController)
     {
-        return _bases.IndexOf(baseController) + 1;
-    }
-
-    private void Clear()
-    {
-        _bases.Clear();
+        return _state.IndexOf(baseController) + 1;
     }
 }
