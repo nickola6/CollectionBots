@@ -70,10 +70,7 @@ public class BaseSpawner : MonoBehaviour
         if (_baseFactory == null || founder == null)
             return;
 
-        BaseController newBase = _baseFactory.Create(
-            position,
-            Quaternion.identity);
-
+        BaseController newBase = _baseFactory.Create(position, Quaternion.identity);
         newBase.ReceiveFoundingWorker(founder);
     }
 }

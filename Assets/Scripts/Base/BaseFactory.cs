@@ -11,30 +11,19 @@ public class BaseFactory : MonoBehaviour
     public BaseController Create(Vector3 position, Quaternion rotation)
     {
         if (_basePrefab == null)
-            throw new InvalidOperationException(
-                $"{nameof(_basePrefab)} is not assigned.");
+            throw new InvalidOperationException($"{nameof(_basePrefab)} is not assigned.");
 
         if (_resourceSpawnService == null)
-            throw new InvalidOperationException(
-                $"{nameof(_resourceSpawnService)} is not assigned.");
+            throw new InvalidOperationException($"{nameof(_resourceSpawnService)} is not assigned.");
 
         if (_baseRegistry == null)
-            throw new InvalidOperationException(
-                $"{nameof(_baseRegistry)} is not assigned.");
+            throw new InvalidOperationException($"{nameof(_baseRegistry)} is not assigned.");
 
         if (_foundationService == null)
-            throw new InvalidOperationException(
-                $"{nameof(_foundationService)} is not assigned.");
+            throw new InvalidOperationException($"{nameof(_foundationService)} is not assigned.");
 
-        BaseController baseController = Instantiate(
-            _basePrefab,
-            position,
-            rotation);
-
-        baseController.Initialize(
-            _resourceSpawnService,
-            _baseRegistry,
-            _foundationService);
+        BaseController baseController = Instantiate(_basePrefab, position, rotation);
+        baseController.Initialize(_resourceSpawnService, _baseRegistry, _foundationService);
 
         return baseController;
     }

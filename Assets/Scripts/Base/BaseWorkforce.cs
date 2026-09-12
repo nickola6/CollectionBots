@@ -8,7 +8,6 @@ public class BaseWorkforce
     public event Action<UnitWorker> WorkerAvailable;
 
     public int WorkersCount => _workers.Count;
-
     public IReadOnlyList<UnitWorker> Workers => _workers;
 
     public void Add(UnitWorker worker)

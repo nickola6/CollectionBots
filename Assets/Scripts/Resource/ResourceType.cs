@@ -1,4 +1,4 @@
 public enum ResourceType
 {
-    BigPotato
+    BigPotato,
 }

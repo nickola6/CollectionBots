@@ -11,15 +11,9 @@ public class BaseFoundationService : MonoBehaviour
 
     public event Action<BaseController, Vector3> FoundationRequested;
 
-    private readonly Dictionary<BaseController, BaseFlag> _flags =
-        new Dictionary<BaseController, BaseFlag>();
-
-    private readonly Dictionary<BaseController, Transform> _flagInstances =
-        new Dictionary<BaseController, Transform>();
-
-    private readonly Dictionary<BaseController, Action<UnitWorker, Vector3>> _baseFoundedHandlers =
-        new Dictionary<BaseController, Action<UnitWorker, Vector3>>();
-
+    private readonly Dictionary<BaseController, BaseFlag> _flags = new Dictionary<BaseController, BaseFlag>();
+    private readonly Dictionary<BaseController, Transform> _flagInstances = new Dictionary<BaseController, Transform>();
+    private readonly Dictionary<BaseController, Action<UnitWorker, Vector3>> _baseFoundedHandlers = new Dictionary<BaseController, Action<UnitWorker, Vector3>>();
     private BaseController _selectedBase;
 
     private void OnEnable()
@@ -98,8 +92,7 @@ public class BaseFoundationService : MonoBehaviour
 
         flag.Place(position);
 
-        if (_flagInstances.TryGetValue(baseController, out Transform instance) == false ||
-            instance == null)
+        if (_flagInstances.TryGetValue(baseController, out Transform instance) == false || instance == null)
         {
             instance = Instantiate(_flagPrefab, position, Quaternion.identity);
             _flagInstances[baseController] = instance;
@@ -122,11 +115,8 @@ public class BaseFoundationService : MonoBehaviour
         if (baseController == null)
             return;
 
-        if (_flagInstances.Remove(baseController, out Transform instance) &&
-            instance != null)
-        {
+        if (_flagInstances.Remove(baseController, out Transform instance) && instance != null)
             Destroy(instance.gameObject);
-        }
 
         if (_flags.TryGetValue(baseController, out BaseFlag flag))
             flag.Clear();
@@ -157,8 +147,7 @@ public class BaseFoundationService : MonoBehaviour
         if (_baseFoundedHandlers.ContainsKey(baseController))
             return;
 
-        Action<UnitWorker, Vector3> handler = (worker, position) =>
-            OnBaseFounded(baseController, worker, position);
+        Action<UnitWorker, Vector3> handler = (worker, position) => OnBaseFounded(baseController, worker, position);
 
         _baseFoundedHandlers.Add(baseController, handler);
         baseController.BaseFounded += handler;

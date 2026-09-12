@@ -12,9 +12,9 @@ public class ResourceSpawner : MonoBehaviour
     [SerializeField] private int _maxActiveCount = 10;
     [SerializeField] private float _spawnInterval = 3f;
 
-    private Coroutine _spawnRoutine;
     private bool _isSpawning;
     private bool _isInitialized;
+    private Coroutine _spawnRoutine;
 
     private void OnEnable()
     {
